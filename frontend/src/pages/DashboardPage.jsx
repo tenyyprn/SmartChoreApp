@@ -117,18 +117,35 @@ const DashboardPage = () => {
     try {
       const result = await calculateAIAssignment()
       if (result) {
-        setDebugData({
+        // 安全性チェックを追加
+        const safeResult = {
           ...result,
           aiResponse: result.debugInfo?.enhancedAssignment?.aiResponse,
           skillMatching: [], 
-          assignments: result.assignments,
-          workloadAnalysis: result.workloadAnalysis,
-          overallFairnessScore: result.overallFairnessScore,
-          metrics: result.debugInfo?.fairnessAnalysis?.metrics
-        })
+          assignments: Array.isArray(result.assignments) ? result.assignments : [],
+          workloadAnalysis: result.workloadAnalysis || {},
+          overallFairnessScore: result.overallFairnessScore || 0,
+          metrics: result.debugInfo?.fairnessAnalysis?.metrics || {}
+        }
+        
+        setDebugData(safeResult)
+        
+        // デバッグログ
+        if (debugMode) {
+          console.log('🎉 AI分担結果:', safeResult)
+        }
       }
     } catch (error) {
       console.error('AI分担エラー:', error)
+      
+      // エラー情報をデバッグデータに設定
+      setDebugData({
+        error: true,
+        errorMessage: error.message || 'AI分担の計算中にエラーが発生しました',
+        assignments: [],
+        workloadAnalysis: {},
+        overallFairnessScore: 0
+      })
     } finally {
       setIsRefreshing(false)
     }

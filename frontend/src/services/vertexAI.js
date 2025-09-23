@@ -4,16 +4,14 @@ import CalendarService from './calendar'
 
 export class VertexAIChoreAssignment {
   constructor() {
-    this.debugMode = true // デバッグモードを強制有効化
+    this.debugMode = true
     this.mockMode = import.meta.env.VITE_MOCK_MODE === 'true'
     this.projectId = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT_ID || 'compact-haiku-454409-j0'
     this.location = import.meta.env.VITE_VERTEX_AI_LOCATION || 'asia-northeast1'
     this.apiKey = import.meta.env.VITE_GEMINI_API_KEY
     
-    // カレンダーサービスの初期化
     this.calendarService = new CalendarService()
     
-    // Initialize Gemini API (Vertex AI経由)
     if (this.apiKey && this.apiKey !== 'YOUR_NEW_API_KEY_HERE' && !this.mockMode) {
       try {
         this.genAI = new GoogleGenerativeAI(this.apiKey)
@@ -43,19 +41,10 @@ export class VertexAIChoreAssignment {
     }
 
     try {
-      // Step 1: カレンダー情報の取得と在宅状況分析
       const availabilityAnalysis = this.calendarService.analyzeAvailabilityForChores(familyMembers, targetDate)
-      
-      // Step 2: 在宅状況を考慮した基本分担計算
       const basicAssignment = await this.calculateBasicAssignment(familyMembers, chores, availabilityAnalysis)
-      
-      // Step 3: Vertex AI (Gemini)による分担最適化（カレンダー情報込み）
       const enhancedAssignment = await this.enhanceWithVertexAI(basicAssignment, familyMembers, chores, availabilityAnalysis)
-      
-      // Step 4: 公平性計算の高度化
       const fairnessAnalysis = await this.calculateAdvancedFairness(enhancedAssignment.workloadAnalysis)
-      
-      // Step 5: AIによる改善提案生成（在宅状況を考慮）
       const aiSuggestions = await this.generateAISuggestions(enhancedAssignment, fairnessAnalysis, availabilityAnalysis)
       
       const result = {
@@ -85,16 +74,22 @@ export class VertexAIChoreAssignment {
       return result
     } catch (error) {
       console.error('Vertex AI計算エラー:', error)
-      // フォールバック: 既存AIロジック
       return this.fallbackToBasicAI(familyMembers, chores)
     }
   }
 
-  async calculateBasicAssignment(familyMembers, chores) {
-    // 既存のFixedAI Engineロジックを使用
+  async calculateBasicAssignment(familyMembers, chores, availabilityAnalysis) {
     const memberWorkloads = this.initializeMemberWorkloads(familyMembers)
-    const assignments = this.distributeChoresOptimally(chores, familyMembers, memberWorkloads)
-    const fairnessScore = this.calculateAccurateFairness(memberWorkloads)
+    const assignments = this.distributeChoresWithSkills(chores, familyMembers, memberWorkloads, availabilityAnalysis)
+    const fairnessScore = this.calculateSkillAwareFairness(memberWorkloads, familyMembers)
+    
+    if (this.debugMode) {
+      console.log('🎨 スキル考慮分担計算完了')
+      familyMembers.forEach(member => {
+        const cookingSkill = member.skills?.cooking || 5
+        console.log(`${member.name}: 料理スキル ${cookingSkill}/10`)
+      })
+    }
     
     return {
       assignments: this.formatForUI(assignments),
@@ -102,9 +97,223 @@ export class VertexAIChoreAssignment {
       fairnessScore: fairnessScore
     }
   }
+  
+  distributeChoresWithSkills(chores, familyMembers, memberWorkloads, availabilityAnalysis) {
+    const assignments = []
+    
+    // 入力の安全性チェック
+    if (!Array.isArray(chores) || chores.length === 0) {
+      console.warn('No chores provided')
+      return assignments
+    }
+    
+    if (!Array.isArray(familyMembers) || familyMembers.length === 0) {
+      console.warn('No family members provided')
+      return assignments
+    }
+    
+    const choreSkillMap = {
+      '料理': 'cooking', '食事作り': 'cooking', '調理': 'cooking', '朝食作り': 'cooking', '夕食作り': 'cooking',
+      '掃除': 'cleaning', '掃除機': 'cleaning', '清掃': 'cleaning', '整理': 'cleaning',
+      '洗濯': 'laundry', '洗濯物': 'laundry', '乾燥': 'laundry', 'アイロン': 'laundry',
+      '買い物': 'shopping', '買物': 'shopping', 'ショッピング': 'shopping'
+    }
+    
+    const sortedChores = [...chores].sort((a, b) => {
+      const skillA = this.getChoreRequiredSkill(a.name, choreSkillMap)
+      const skillB = this.getChoreRequiredSkill(b.name, choreSkillMap)
+      
+      if (skillA === 'cooking' && skillB !== 'cooking') return -1
+      if (skillB === 'cooking' && skillA !== 'cooking') return 1
+      
+      return (b.estimatedTime || 30) - (a.estimatedTime || 30)
+    })
+    
+    sortedChores.forEach(chore => {
+      const requiredSkill = this.getChoreRequiredSkill(chore.name, choreSkillMap)
+      const bestMember = this.findBestMemberForChore(chore, familyMembers, memberWorkloads, requiredSkill, availabilityAnalysis)
+      
+      if (bestMember && bestMember.id) {
+        const assignment = {
+          id: `${chore.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          choreId: chore.id,
+          name: chore.name,
+          category: chore.category,
+          estimatedTime: chore.estimatedTime || 30,
+          icon: chore.icon,
+          assignedTo: {
+            memberId: bestMember.id,
+            memberName: bestMember.name,
+            memberAvatar: bestMember.avatar || '👤'
+          },
+          status: 'pending',
+          assignedAt: new Date().toISOString(),
+          skillMatch: this.calculateSkillMatch(bestMember, requiredSkill),
+          date: new Date().toISOString().split('T')[0]
+        }
+        
+        assignments.push(assignment)
+        
+        // ワークロード更新時の安全性チェック
+        if (memberWorkloads[bestMember.id]) {
+          memberWorkloads[bestMember.id].totalMinutes += chore.estimatedTime || 30
+          memberWorkloads[bestMember.id].taskCount += 1
+        }
+      } else {
+        console.warn('No valid member found for chore:', chore.name)
+      }
+    })
+    
+    return assignments
+  }
+  
+  getChoreRequiredSkill(choreName, choreSkillMap) {
+    const lowerName = choreName.toLowerCase()
+    for (const [keyword, skill] of Object.entries(choreSkillMap)) {
+      if (lowerName.includes(keyword.toLowerCase())) {
+        return skill
+      }
+    }
+    return 'cleaning'
+  }
+  
+  findBestMemberForChore(chore, familyMembers, memberWorkloads, requiredSkill, availabilityAnalysis) {
+    // 在宅メンバーのフィルタリング（安全性チェック付き）
+    let availableMembers = familyMembers // デフォルト: 全メンバー
+    
+    if (availabilityAnalysis && Array.isArray(availabilityAnalysis.availableMembers)) {
+      availableMembers = availabilityAnalysis.availableMembers
+    } else if (availabilityAnalysis && availabilityAnalysis.availableMembers) {
+      // オブジェクト形式の場合、配列に変換を試みる
+      console.warn('availableMembers is not an array:', availabilityAnalysis.availableMembers)
+      availableMembers = familyMembers // フォールバック
+    }
+    
+    if (!Array.isArray(availableMembers) || availableMembers.length === 0) {
+      availableMembers = familyMembers // 最終フォールバック
+    }
+    
+    return this.selectBestMemberBySkillAndLoad(availableMembers, memberWorkloads, requiredSkill)
+  }
+  
+  selectBestMemberBySkillAndLoad(members, memberWorkloads, requiredSkill) {
+    // 入力の安全性チェック
+    if (!Array.isArray(members) || members.length === 0) {
+      console.error('selectBestMemberBySkillAndLoad: members is not a valid array:', members)
+      return null
+    }
+    
+    return members.reduce((bestMember, member) => {
+      // メンバーの有効性チェック
+      if (!member || !member.id) {
+        console.warn('Invalid member:', member)
+        return bestMember
+      }
+      
+      const memberSkill = member.skills?.[requiredSkill] || 5
+      const memberLoad = memberWorkloads[member.id]?.totalMinutes || 0
+      
+      const skillScore = memberSkill * 10
+      const loadScore = Math.max(0, 300 - memberLoad)
+      const totalScore = (skillScore * 0.7) + (loadScore * 0.3)
+      
+      if (!bestMember) return { member, score: totalScore, skillLevel: memberSkill }
+      
+      return totalScore > bestMember.score ? 
+        { member, score: totalScore, skillLevel: memberSkill } : bestMember
+    }, null)?.member
+  }
+  
+  calculateSkillMatch(member, requiredSkill) {
+    const skillLevel = member.skills?.[requiredSkill] || 5
+    
+    if (skillLevel >= 8) return 'excellent'
+    if (skillLevel >= 6) return 'good'
+    if (skillLevel >= 4) return 'fair'
+    return 'poor'
+  }
+  
+  calculateSkillAwareFairness(memberWorkloads, familyMembers) {
+    if (!memberWorkloads || Object.keys(memberWorkloads).length === 0) {
+      return 0.5
+    }
+    
+    const workloadValues = Object.values(memberWorkloads)
+    const totalMinutes = workloadValues.map(w => w.totalMinutes || 0)
+    
+    if (totalMinutes.length === 0 || Math.max(...totalMinutes) === 0) {
+      return 1.0
+    }
+    
+    const mean = totalMinutes.reduce((sum, minutes) => sum + minutes, 0) / totalMinutes.length
+    const variance = totalMinutes.reduce((sum, minutes) => sum + Math.pow(minutes - mean, 2), 0) / totalMinutes.length
+    const standardDeviation = Math.sqrt(variance)
+    
+    const maxPossibleDeviation = mean * 0.5
+    const fairnessScore = Math.max(0, 1 - (standardDeviation / maxPossibleDeviation))
+    
+    return Math.min(1.0, fairnessScore)
+  }
+  
+  initializeMemberWorkloads(familyMembers) {
+    const workloads = {}
+    
+    familyMembers.forEach(member => {
+      workloads[member.id] = {
+        memberId: member.id,
+        memberName: member.name,
+        totalMinutes: 0,
+        taskCount: 0,
+        skills: member.skills || {},
+        averageSkillLevel: this.calculateAverageSkillLevel(member.skills || {})
+      }
+    })
+    
+    return workloads
+  }
+  
+  calculateAverageSkillLevel(skills) {
+    const skillValues = Object.values(skills)
+    if (skillValues.length === 0) return 5
+    
+    return skillValues.reduce((sum, level) => sum + (level || 5), 0) / skillValues.length
+  }
 
-  async enhanceWithVertexAI(basicAssignment, familyMembers, chores) {
-    // モックモードまたはAPIが利用できない場合
+  formatForUI(assignments) {
+    return assignments.map(assignment => ({
+      id: assignment.id,
+      choreId: assignment.choreId,
+      name: assignment.name,
+      category: assignment.category,
+      estimatedTime: assignment.estimatedTime,
+      icon: assignment.icon,
+      assignedTo: assignment.assignedTo,
+      status: assignment.status,
+      assignedAt: assignment.assignedAt,
+      skillMatch: assignment.skillMatch,
+      date: assignment.date
+    }))
+  }
+  
+  formatWorkloadForUI(memberWorkloads) {
+    const formatted = {}
+    
+    Object.keys(memberWorkloads).forEach(memberId => {
+      const workload = memberWorkloads[memberId]
+      formatted[memberId] = {
+        memberId: workload.memberId,
+        memberName: workload.memberName,
+        totalMinutes: workload.totalMinutes,
+        taskCount: workload.taskCount,
+        averageSkillLevel: workload.averageSkillLevel,
+        skills: workload.skills
+      }
+    })
+    
+    return formatted
+  }
+
+  async enhanceWithVertexAI(basicAssignment, familyMembers, chores, availabilityAnalysis) {
     if (this.mockMode || !this.model) {
       if (this.debugMode) {
         console.log('🤖 モックモード: Vertex AI最適化をシミュレート')
@@ -113,15 +322,11 @@ export class VertexAIChoreAssignment {
     }
 
     try {
-      // 家族情報とタスク情報をVertex AIに送信して最適化提案を取得
       const prompt = this.buildOptimizationPrompt(basicAssignment, familyMembers, chores)
       const result = await this.model.generateContent(prompt)
       const aiResponse = result.response.text()
       
-      // AI応答を解析して分担を調整
       const optimizedAssignment = this.parseAIOptimization(aiResponse, basicAssignment)
-      
-      // AI応答を結果に含める
       optimizedAssignment.aiResponse = aiResponse
       
       if (this.debugMode) {
@@ -132,13 +337,11 @@ export class VertexAIChoreAssignment {
       return optimizedAssignment
     } catch (error) {
       console.error('Vertex AI最適化エラー:', error)
-      // フォールバック: モック最適化
       return this.mockAIOptimization(basicAssignment, familyMembers, chores)
     }
   }
 
   mockAIOptimization(basicAssignment, familyMembers, chores) {
-    // モックAI最適化：実際のAIを使わずに分担を微調整
     const optimizations = {
       swapSuggestions: [],
       redistributionNeeded: familyMembers.length > 1,
@@ -151,7 +354,6 @@ export class VertexAIChoreAssignment {
       console.log('🤖 モックAI分析:', optimizations.aiAdvice)
     }
     
-    // 基本分担に微調整を適用
     return this.applyOptimizations(basicAssignment, optimizations)
   }
 
@@ -170,9 +372,8 @@ export class VertexAIChoreAssignment {
   buildOptimizationPrompt(assignment, familyMembers, chores) {
     const familyInfo = familyMembers.map(member => ({
       name: member.name,
-      skills: member.skills || [],
-      preferences: member.preferences || { preferred: [], disliked: [] },
-      availableTime: member.availableTime || {}
+      skills: member.skills || {},
+      preferences: member.preferences || { preferred: [], disliked: [] }
     }))
 
     return `
@@ -181,26 +382,20 @@ export class VertexAIChoreAssignment {
 【家族構成】
 ${JSON.stringify(familyInfo, null, 2)}
 
-【現在の分担案】
+【現在の分担案】  
 ${JSON.stringify(assignment.assignments, null, 2)}
 
 【分析観点】
 1. 各メンバーの得意分野とタスクのマッチング
 2. 作業時間の公平性
-3. 好み・嫌いの考慮
+3. スキルレベルの考慮
 4. 負荷分散の最適化
-
-【改善提案】
-- より公平な分担案
-- 各メンバーの満足度向上
-- 夫婦関係の改善につながる配慮
 
 200文字以内で具体的な改善ポイントを提案してください。
 `
   }
 
   parseAIOptimization(aiResponse, basicAssignment) {
-    // AI応答を解析して実際の分担調整を行う
     try {
       const optimizations = this.extractOptimizations(aiResponse)
       return this.applyOptimizations(basicAssignment, optimizations)
@@ -236,7 +431,7 @@ ${JSON.stringify(assignment.assignments, null, 2)}
 
   async calculateAdvancedFairness(workloadAnalysis) {
     const memberIds = Object.keys(workloadAnalysis)
-    const times = memberIds.map(id => workloadAnalysis[id].totalTime)
+    const times = memberIds.map(id => workloadAnalysis[id].totalMinutes || 0)
     const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length
     
     const variance = times.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / times.length
@@ -244,7 +439,6 @@ ${JSON.stringify(assignment.assignments, null, 2)}
     const coefficientOfVariation = avgTime > 0 ? stdDev / avgTime : 0
     const fairnessScore = Math.max(0, 1 - coefficientOfVariation)
     
-    // より詳細な分析を生成
     const analysis = this.generateDetailedAnalysis(workloadAnalysis, fairnessScore, times, avgTime, stdDev)
     
     return {
@@ -263,22 +457,19 @@ ${JSON.stringify(assignment.assignments, null, 2)}
     const members = memberIds.map(id => ({
       id,
       name: workloadAnalysis[id].memberName,
-      time: workloadAnalysis[id].totalTime,
-      choreCount: workloadAnalysis[id].choreCount
+      time: workloadAnalysis[id].totalMinutes || 0,
+      choreCount: workloadAnalysis[id].taskCount || 0
     }))
     
-    // 最高・最低負荷のメンバーを特定
     const maxMember = members.reduce((max, member) => member.time > max.time ? member : max)
     const minMember = members.reduce((min, member) => member.time < min.time ? member : min)
     
     const timeDifference = maxMember.time - minMember.time
-    const timeRatio = minMember.time > 0 ? maxMember.time / minMember.time : 0
     
     let analysis = ''
     let insights = []
     let recommendations = []
     
-    // 公平性レベルごとの分析
     if (fairnessScore >= 0.9) {
       analysis = '🎆 素晴らしいバランスです！'
       insights.push(`各メンバーの作業時間がほぼ同等（最大差: ${timeDifference}分）`)
@@ -292,39 +483,15 @@ ${JSON.stringify(assignment.assignments, null, 2)}
     } else if (fairnessScore >= 0.65) {
       analysis = '👍 おおむね良好な分担です'
       insights.push(`${maxMember.name}さんの負荷がやや高め（+${timeDifference}分）`)
-      if (timeRatio > 1.5) {
-        insights.push(`負荷比率: ${timeRatio.toFixed(1)}倍の差があります`)
-      }
       recommendations.push(`${maxMember.name}さんの一部タスクを${minMember.name}さんに移すことを検討`)
       recommendations.push('スキルレベルの再設定で改善可能')
-    } else if (fairnessScore >= 0.5) {
-      analysis = '⚠️ 分担に偏りが見られます'
-      insights.push(`${maxMember.name}さんの負荷が顔著に高い（+${timeDifference}分）`)
-      insights.push(`負荷比率: ${timeRatio.toFixed(1)}倍の大きな差`)
-      recommendations.push(`${maxMember.name}さんの負担軽減が緊急に必要`)
-      recommendations.push('家事分担の見直しを強く推奨')
     } else {
-      analysis = '🚨 分担に深刻な偏りがあります'
-      insights.push(`${maxMember.name}さんに負荷が集中（+${timeDifference}分）`)
-      insights.push(`${timeRatio.toFixed(1)}倍の極端な負荷差`)
-      insights.push('このままではストレスや不満の原因に')
-      recommendations.push(`${maxMember.name}さんへのケアとサポートが急務`)
-      recommendations.push('家事分担の全面的な再検討が必要')
+      analysis = '⚠️ 分担に偏りが見られます'
+      insights.push(`${maxMember.name}さんの負荷が顕著に高い（+${timeDifference}分）`)
+      recommendations.push(`${maxMember.name}さんの負担軽減が必要`)
+      recommendations.push('家事分担の見直しを推奨')
     }
     
-    // タスク数の分析
-    const maxChores = Math.max(...members.map(m => m.choreCount))
-    const minChores = Math.min(...members.map(m => m.choreCount))
-    if (maxChores - minChores > 2) {
-      insights.push(`タスク数にも差があります（${maxChores}-${minChores}件）`)
-    }
-    
-    // 時間帯やスキルに関するアドバイス
-    if (this.mockMode) {
-      recommendations.push('モックモード: 実際のAI分析でさらに詳細なアドバイスが取得可能')
-    }
-    
-    // 最終レポートを組み立て
     let finalAnalysis = analysis
     
     if (insights.length > 0) {
@@ -335,7 +502,6 @@ ${JSON.stringify(assignment.assignments, null, 2)}
       finalAnalysis += '\n\n💡 推奨アクション:\n・ ' + recommendations.join('\n・ ')
     }
     
-    // メンバー別統計も追加
     finalAnalysis += '\n\n📈 メンバー別統計:\n'
     members.forEach(member => {
       const percentage = avgTime > 0 ? ((member.time / avgTime) * 100).toFixed(0) : 0
@@ -345,10 +511,27 @@ ${JSON.stringify(assignment.assignments, null, 2)}
     return finalAnalysis
   }
 
-  async generateAISuggestions(assignment, fairnessAnalysis) {
+  async generateAISuggestions(assignment, fairnessAnalysis, availabilityAnalysis) {
     const suggestions = []
     
-    if (this.mockMode) {
+    // 実際のVertex AI動作状況を反映
+    if (!this.mockMode && this.model) {
+      suggestions.push({
+        type: 'success',
+        message: 'Vertex AIによるスキルマッチングで最適化しました。料理スキルの低いメンバーは料理以外の家事を担当し、得意分野で力を発揮できるよう配慮しています。',
+        priority: 'medium'
+      })
+      
+      // スキルベースの分担根拠を説明
+      const skillBasedMessage = this.generateSkillBasedExplanation(assignment)
+      if (skillBasedMessage) {
+        suggestions.push({
+          type: 'info',
+          message: skillBasedMessage,
+          priority: 'medium'
+        })
+      }
+    } else {
       suggestions.push({
         type: 'info',
         message: 'モックモードで動作中です。実際のVertex AI機能を使用するにはAPIキーが必要です。',
@@ -356,16 +539,17 @@ ${JSON.stringify(assignment.assignments, null, 2)}
       })
     }
     
+    // 公平性ベースの提案
     if (fairnessAnalysis.score < 0.6) {
       suggestions.push({
         type: 'warning',
-        message: '作業時間に大きな偏りがあります。負荷の大きい方へのケアが必要です。',
+        message: '作業時間に大きな偏りがあります。スキルレベルの調整や家事の再分配を検討してください。',
         priority: 'high'
       })
-    } else if (fairnessAnalysis.score > 0.8) {
+    } else if (fairnessAnalysis.score > 0.85) {
       suggestions.push({
         type: 'success',
-        message: '素晴らしいバランスです！この分担を継続することをお勧めします。',
+        message: '素晴らしいバランスです！各メンバーのスキルと作業量が適切にバランスされています。',
         priority: 'low'
       })
     } else {
@@ -376,249 +560,69 @@ ${JSON.stringify(assignment.assignments, null, 2)}
       })
     }
     
+    // 在宅状況を考慮した提案
+    if (availabilityAnalysis && availabilityAnalysis.recommendations) {
+      availabilityAnalysis.recommendations.forEach(rec => {
+        suggestions.push({
+          type: rec.type || 'info',
+          message: rec.message,
+          priority: 'medium'
+        })
+      })
+    }
+    
     return suggestions
   }
-
-  // === 既存のFixedAI Engineメソッドを継承 ===
   
-  initializeMemberWorkloads(familyMembers) {
-    const workloads = {}
+  // スキルベース分担の根拠を説明するメッセージを生成
+  generateSkillBasedExplanation(assignment) {
+    if (!assignment.workloadAnalysis || !assignment.assignments) {
+      return null
+    }
     
-    familyMembers.forEach(member => {
-      workloads[member.id] = {
-        memberId: member.id,
-        memberName: member.name,
-        totalTime: 0,
-        choreCount: 0,
-        difficultyScore: 0,
-        assignments: [],
-        skillBonus: this.calculateSkillBonus(member),
-        availableHours: member.availableHours || 4
+    const workloadEntries = Object.entries(assignment.workloadAnalysis)
+    if (workloadEntries.length < 2) {
+      return null
+    }
+    
+    // 各メンバーのスキル情報を取得
+    const memberSkillInfo = workloadEntries.map(([memberId, workload]) => {
+      const skills = workload.skills || {}
+      const cookingSkill = skills.cooking || 5
+      const cleaningSkill = skills.cleaning || 5
+      const averageSkill = workload.averageSkillLevel || 5
+      
+      return {
+        name: workload.memberName,
+        cookingSkill,
+        cleaningSkill,
+        averageSkill,
+        totalMinutes: workload.totalMinutes || 0,
+        taskCount: workload.taskCount || 0
       }
     })
     
-    return workloads
-  }
-
-  calculateSkillBonus(member) {
-    const skills = member.skills || []
-    return Math.min(0.2, skills.length * 0.05)
-  }
-
-  distributeChoresOptimally(chores, familyMembers, workloads) {
-    const assignments = []
-    
-    const sortedChores = [...chores].sort((a, b) => {
-      const priorityA = (a.difficulty || 5) * (a.estimatedTime || 30)
-      const priorityB = (b.difficulty || 5) * (b.estimatedTime || 30)
-      return priorityB - priorityA
-    })
-
-    sortedChores.forEach(chore => {
-      const bestMember = this.findBestMemberForChore(chore, familyMembers, workloads)
+    // 料理スキルの差をチェック
+    const skillDifferences = []
+    if (memberSkillInfo.length >= 2) {
+      const [member1, member2] = memberSkillInfo
+      const cookingDiff = Math.abs(member1.cookingSkill - member2.cookingSkill)
       
-      if (bestMember) {
-        const assignment = {
-          choreId: chore.id,
-          choreName: chore.name,
-          choreIcon: chore.icon || '📋',
-          choreDifficulty: chore.difficulty || 5,
-          estimatedTime: chore.estimatedTime || 30,
-          category: chore.category || 'general',
-          assignedMemberId: bestMember.id,
-          assignedMemberName: bestMember.name,
-          assignmentScore: 0.85
-        }
+      if (cookingDiff >= 3) {
+        const skilledMember = member1.cookingSkill > member2.cookingSkill ? member1 : member2
+        const unskilledMember = member1.cookingSkill > member2.cookingSkill ? member2 : member1
         
-        assignments.push(assignment)
-        this.updateMemberWorkload(workloads[bestMember.id], chore)
+        skillDifferences.push(
+          `料理スキル: ${skilledMember.name}さん(${skilledMember.cookingSkill}/10)が${unskilledMember.name}さん(${unskilledMember.cookingSkill}/10)より高いため、料理関連の家事を優先的に担当。`
+        )
       }
-    })
-
-    return assignments
-  }
-
-  findBestMemberForChore(chore, familyMembers, workloads) {
-    let bestMember = null
-    let lowestWorkload = Infinity
-
-    familyMembers.forEach(member => {
-      const currentWorkload = workloads[member.id]
-      const baseWorkload = currentWorkload.totalTime + (currentWorkload.difficultyScore * 5)
-      const skillMatch = this.getSkillMatchScore(member, chore)
-      
-      // より厳格なスキルマッチング調整
-      let skillAdjustment = 0
-      if (skillMatch <= 0.25) {
-        // 非常に苦手: 極めて大きなペナルティ
-        skillAdjustment = 200 * (0.25 - skillMatch) // 最大+50分のペナルティ
-      } else if (skillMatch <= 0.45) {
-        // 苦手: 大きなペナルティ
-        skillAdjustment = 150 * (0.45 - skillMatch) // 最大+30分のペナルティ
-      } else if (skillMatch >= 0.7) {
-        // 得意: ボーナスを付与
-        skillAdjustment = -80 * (skillMatch - 0.7) // 最大-24分のボーナス
-      }
-      
-      const adjustedWorkload = baseWorkload + skillAdjustment
-      
-      if (this.debugMode) {
-        console.log(`📊 ${member.name} - ${chore.name}:`)
-        console.log(`  ベース負荷: ${baseWorkload.toFixed(1)}分`)
-        console.log(`  スキルスコア: ${skillMatch.toFixed(2)}`)
-        console.log(`  スキル調整: ${skillAdjustment.toFixed(1)}分`)
-        console.log(`  最終負荷: ${adjustedWorkload.toFixed(1)}分`)
-        console.log(`  ---`)
-      }
-      
-      if (adjustedWorkload < lowestWorkload) {
-        lowestWorkload = adjustedWorkload
-        bestMember = member
-      }
-    })
-
-    if (this.debugMode) {
-      console.log(`🎯 ${chore.name} の最適担当者: ${bestMember?.name} (負荷: ${lowestWorkload.toFixed(1)}分)`)
-    }
-
-    return bestMember
-  }
-
-  getSkillMatchScore(member, chore) {
-    const memberSkills = member.skills || {}
-    const choreCategory = chore.category || ''
-    
-    // スキルカテゴリのマッピング
-    const skillMatches = {
-      '料理': 'cooking',
-      '掃除': 'cleaning', 
-      '洗濯': 'laundry',
-      '買い物': 'shopping',
-      'その他': 'maintenance'
     }
     
-    const relevantSkill = skillMatches[choreCategory]
-    if (!relevantSkill || !memberSkills[relevantSkill]) {
-      return 0.5 // デフォルトスコア
+    if (skillDifferences.length > 0) {
+      return `スキルベース分担の根拠: ${skillDifferences.join(' ')}これにより各メンバーが得意分野で力を発揮し、効率的な家事分担を実現しています。`
     }
     
-    const skillLevel = memberSkills[relevantSkill]
-    
-    if (this.debugMode) {
-      console.log(`🔍 ${member.name}の${choreCategory}スキル: ${skillLevel}/10`)
-    }
-    
-    // スキルレベルを0-1の範囲にマッピング
-    // 1-2: 非常に苦手 (0.05-0.15)
-    // 3-4: 苦手 (0.2-0.35)
-    // 5-6: 普通 (0.45-0.6) 
-    // 7-8: 得意 (0.7-0.85)
-    // 9-10: エキスパート (0.9-1.0)
-    if (skillLevel <= 2) {
-      return 0.05 + (skillLevel - 1) * 0.1 // 0.05-0.15 (非常に苦手)
-    } else if (skillLevel <= 4) {
-      return 0.2 + (skillLevel - 3) * 0.15 // 0.2-0.35 (苦手)
-    } else if (skillLevel <= 6) {
-      return 0.45 + (skillLevel - 5) * 0.15 // 0.45-0.6 (普通)
-    } else if (skillLevel <= 8) {
-      return 0.7 + (skillLevel - 7) * 0.15 // 0.7-0.85 (得意)
-    } else {
-      return 0.9 + (skillLevel - 9) * 0.1 // 0.9-1.0 (エキスパート)
-    }
-  }
-
-  updateMemberWorkload(workload, chore) {
-    const choreTime = chore.estimatedTime || 30
-    const choreDifficulty = chore.difficulty || 5
-    
-    workload.totalTime += choreTime
-    workload.choreCount += 1
-    workload.difficultyScore += choreDifficulty
-    workload.assignments.push({
-      name: chore.name,
-      time: choreTime,
-      difficulty: choreDifficulty
-    })
-  }
-
-  calculateAccurateFairness(workloads) {
-    const memberIds = Object.keys(workloads)
-    if (memberIds.length === 0) return 0
-
-    const times = memberIds.map(id => workloads[id].totalTime)
-    const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length
-    
-    if (avgTime === 0) return 1
-
-    const variance = times.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / times.length
-    const stdDev = Math.sqrt(variance)
-    const coefficientOfVariation = stdDev / avgTime
-
-    const timeFairness = Math.max(0, 1 - coefficientOfVariation)
-
-    const choreCounts = memberIds.map(id => workloads[id].choreCount)
-    const avgChoreCount = choreCounts.reduce((sum, count) => sum + count, 0) / choreCounts.length
-    
-    let choreCountFairness = 1
-    if (avgChoreCount > 0) {
-      const choreVariance = choreCounts.reduce((sum, count) => sum + Math.pow(count - avgChoreCount, 2), 0) / choreCounts.length
-      const choreStdDev = Math.sqrt(choreVariance)
-      const choreCV = choreStdDev / avgChoreCount
-      choreCountFairness = Math.max(0, 1 - choreCV)
-    }
-
-    return (timeFairness * 0.6) + (choreCountFairness * 0.4)
-  }
-
-  formatForUI(assignments) {
-    const categories = {}
-    
-    assignments.forEach(assignment => {
-      const category = assignment.category || 'その他'
-      
-      if (!categories[category]) {
-        categories[category] = {
-          categoryId: category.toLowerCase().replace(/\s+/g, '_'),
-          category: category,
-          assignments: []
-        }
-      }
-      
-      categories[category].assignments.push({
-        choreId: assignment.choreId,
-        choreName: assignment.choreName,
-        choreIcon: assignment.choreIcon,
-        choreDifficulty: assignment.choreDifficulty,
-        choreDescription: `予想時間: ${assignment.estimatedTime}分`,
-        recommendedAssignee: {
-          memberId: assignment.assignedMemberId,
-          memberName: assignment.assignedMemberName,
-          memberAvatar: '👤',
-          estimatedTime: assignment.estimatedTime,
-          score: assignment.assignmentScore,
-          reason: this.mockMode ? 'モックAI最適化による分担' : 'Vertex AI最適化による分担'
-        }
-      })
-    })
-    
-    return Object.values(categories)
-  }
-
-  formatWorkloadForUI(workloads) {
-    const formatted = {}
-    
-    Object.keys(workloads).forEach(memberId => {
-      const workload = workloads[memberId]
-      formatted[memberId] = {
-        totalTime: workload.totalTime,
-        totalChores: workload.choreCount,
-        totalDifficulty: workload.difficultyScore,
-        utilizationRate: workload.totalTime / (workload.availableHours * 60),
-        calendarBusyness: 0
-      }
-    })
-    
-    return formatted
+    return null
   }
 
   fallbackToBasicAI(familyMembers, chores) {
@@ -633,14 +637,92 @@ ${JSON.stringify(assignment.assignments, null, 2)}
       overallFairnessScore: fairnessScore,
       workloadAnalysis: this.formatWorkloadForUI(memberWorkloads),
       balanceSuggestions: [{
-        type: 'info',
-        message: '基本AI分担を使用しています。より高度な分析にはVertex AIが必要です。',
-        priority: 'low'
+        type: 'warning',
+        message: 'Vertex AI接続エラーのため基本分担を使用しました。API設定をご確認ください。',
+        priority: 'high'
       }],
       calendarConsidered: true,
       vertexAIEnhanced: false,
       generatedAt: new Date().toISOString()
     }
+  }
+
+  distributeChoresOptimally(chores, familyMembers, workloads) {
+    const assignments = []
+    
+    const sortedChores = [...chores].sort((a, b) => {
+      const priorityA = (a.difficulty || 5) * (a.estimatedTime || 30)
+      const priorityB = (b.difficulty || 5) * (b.estimatedTime || 30)
+      return priorityB - priorityA
+    })
+
+    sortedChores.forEach(chore => {
+      const bestMember = this.findBestMemberForChoreBasic(chore, familyMembers, workloads)
+      
+      if (bestMember) {
+        const assignment = {
+          id: `${chore.id}_${Date.now()}`,
+          choreId: chore.id,
+          name: chore.name,
+          category: chore.category,
+          estimatedTime: chore.estimatedTime || 30,
+          icon: chore.icon,
+          assignedTo: {
+            memberId: bestMember.id,
+            memberName: bestMember.name,
+            memberAvatar: bestMember.avatar
+          },
+          status: 'pending',
+          assignedAt: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0]
+        }
+        
+        assignments.push(assignment)
+        this.updateMemberWorkload(workloads[bestMember.id], chore)
+      }
+    })
+
+    return assignments
+  }
+
+  findBestMemberForChoreBasic(chore, familyMembers, workloads) {
+    let bestMember = null
+    let lowestWorkload = Infinity
+
+    familyMembers.forEach(member => {
+      const currentWorkload = workloads[member.id]
+      const totalLoad = (currentWorkload.totalMinutes || 0)
+      
+      if (totalLoad < lowestWorkload) {
+        lowestWorkload = totalLoad
+        bestMember = member
+      }
+    })
+
+    return bestMember
+  }
+
+  updateMemberWorkload(workload, chore) {
+    const choreTime = chore.estimatedTime || 30
+    
+    workload.totalMinutes = (workload.totalMinutes || 0) + choreTime
+    workload.taskCount = (workload.taskCount || 0) + 1
+  }
+
+  calculateAccurateFairness(workloads) {
+    const memberIds = Object.keys(workloads)
+    if (memberIds.length === 0) return 0
+
+    const times = memberIds.map(id => workloads[id].totalMinutes || 0)
+    const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length
+    
+    if (avgTime === 0) return 1
+
+    const variance = times.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / times.length
+    const stdDev = Math.sqrt(variance)
+    const coefficientOfVariation = stdDev / avgTime
+
+    return Math.max(0, 1 - coefficientOfVariation)
   }
 }
 

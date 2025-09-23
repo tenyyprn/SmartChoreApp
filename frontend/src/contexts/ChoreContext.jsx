@@ -490,38 +490,94 @@ export const ChoreProvider = ({ children }) => {
       
       console.log('✅ Vertex AI分担計算完了:', aiResult)
       
-      // Convert AI result to choreAssignments format
-      const assignments = []
+      // 安全性チェックとデータ変換
+      let assignments = []
       
-      aiResult.assignments.forEach(categoryData => {
-        categoryData.assignments.forEach(assignment => {
-          const choreData = todaysChores.find(c => c.choreId === assignment.choreId) || {}
+      if (aiResult && Array.isArray(aiResult.assignments)) {
+        // Vertex AIの新しい形式に対応
+        assignments = aiResult.assignments.map(assignment => ({
+          id: assignment.id || `assignment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          choreId: assignment.choreId,
+          name: assignment.name,
+          icon: assignment.icon || '📋',
+          estimatedTime: assignment.estimatedTime || 30,
+          difficulty: assignment.difficulty || 5,
+          category: assignment.category || 'その他',
+          description: assignment.description || '',
+          tips: assignment.tips || '',
+          assignedTo: assignment.assignedTo || {
+            memberId: 'unassigned',
+            memberName: '未割り当て',
+            memberAvatar: '❓'
+          },
+          status: 'pending',
+          date: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString(),
+          generatedFromSchedule: true,
+          skillMatch: assignment.skillMatch || 'fair'
+        }))
+      } else if (aiResult && Array.isArray(aiResult.assignments) && aiResult.assignments[0]?.assignments) {
+        // 旧いカテゴリ形式に対応
+        aiResult.assignments.forEach(categoryData => {
+          if (categoryData.assignments && Array.isArray(categoryData.assignments)) {
+            categoryData.assignments.forEach(assignment => {
+              const choreData = todaysChores.find(c => c.choreId === assignment.choreId) || {}
+              
+              assignments.push({
+                id: `assignment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                choreId: assignment.choreId,
+                name: assignment.choreName || choreData.name || '未設定のタスク',
+                icon: assignment.choreIcon || choreData.icon || '📋',
+                estimatedTime: assignment.recommendedAssignee?.estimatedTime || choreData.estimatedTime || 30,
+                difficulty: assignment.choreDifficulty || choreData.difficulty || 5,
+                category: categoryData.category,
+                description: choreData.description || '',
+                tips: choreData.tips || '',
+                assignedTo: {
+                  memberId: assignment.recommendedAssignee?.memberId || 'unassigned',
+                  memberName: assignment.recommendedAssignee?.memberName || '未割り当て',
+                  memberAvatar: assignment.recommendedAssignee?.memberAvatar || '❓'
+                },
+                status: 'pending',
+                date: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
+                generatedFromSchedule: true,
+                aiScore: assignment.recommendedAssignee?.score || 0.5
+              })
+            })
+          }
+        })
+      } else {
+        // フォールバック: シンプルな割り当て
+        console.warn('Vertex AI結果が予期した形式ではありません:', aiResult)
+        assignments = todaysChores.map((chore, index) => {
+          const memberIndex = index % state.familyMembers.length
+          const assignedMember = state.familyMembers[memberIndex]
           
-          assignments.push({
-            id: `assignment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            choreId: assignment.choreId,
-            name: assignment.choreName || choreData.name,
-            icon: assignment.choreIcon || choreData.icon || '📋',
-            estimatedTime: assignment.recommendedAssignee?.estimatedTime || choreData.estimatedTime || 30,
-            difficulty: assignment.choreDifficulty || choreData.difficulty || 5,
-            category: categoryData.category,
-            description: choreData.description || '',
-            tips: choreData.tips || '',
+          return {
+            id: `fallback_${Date.now()}_${index}`,
+            choreId: chore.choreId,
+            name: chore.name,
+            icon: chore.icon || '📋',
+            estimatedTime: chore.estimatedTime || 30,
+            difficulty: chore.difficulty || 5,
+            category: chore.category || 'その他',
+            description: chore.description || '',
             assignedTo: {
-              memberId: assignment.recommendedAssignee.memberId,
-              memberName: assignment.recommendedAssignee.memberName,
-              memberAvatar: assignment.recommendedAssignee.memberAvatar
+              memberId: assignedMember.id,
+              memberName: assignedMember.name,
+              memberAvatar: assignedMember.avatar || '👤'
             },
             status: 'pending',
             date: new Date().toISOString().split('T')[0],
             createdAt: new Date().toISOString(),
             generatedFromSchedule: true,
-            aiScore: assignment.recommendedAssignee.score
-          })
+            fallbackAssignment: true
+          }
         })
-      })
+      }
       
-      // Update state with assignments and AI suggestions
+      // State更新
       dispatch({
         type: ACTION_TYPES.SET_CHORE_ASSIGNMENTS,
         payload: assignments
@@ -534,11 +590,37 @@ export const ChoreProvider = ({ children }) => {
       
       console.log('📋 今日の家事を生成:', assignments.length, '件')
       
-      return aiResult
+      return {
+        ...aiResult,
+        assignments: assignments, // 安全な配列を保証
+        workloadAnalysis: aiResult?.workloadAnalysis || {},
+        overallFairnessScore: aiResult?.overallFairnessScore || 0.5,
+        balanceSuggestions: aiResult?.balanceSuggestions || []
+      }
       
     } catch (error) {
       console.error('AI assignment calculation error:', error)
-      return null
+      
+      // エラー時のフォールバック
+      const errorResult = {
+        assignments: [],
+        workloadAnalysis: {},
+        overallFairnessScore: 0,
+        balanceSuggestions: [{
+          type: 'error',
+          message: 'AI分担計算中にエラーが発生しました。再試行してください。',
+          priority: 'high'
+        }],
+        error: true,
+        errorMessage: error.message
+      }
+      
+      dispatch({
+        type: ACTION_TYPES.SET_AI_SUGGESTIONS,
+        payload: errorResult
+      })
+      
+      return errorResult
     }
   }
 

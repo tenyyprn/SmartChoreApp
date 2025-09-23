@@ -1,0 +1,36 @@
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="120" height="40" rx="8" fill="url(#gradient)"/>
+  
+  <!-- Robot/AI Icon -->
+  <circle cx="16" cy="20" r="8" fill="white" opacity="0.9"/>
+  <rect x="13" y="17" width="2" height="2" rx="1" fill="#3B82F6"/>
+  <rect x="17" y="17" width="2" height="2" rx="1" fill="#3B82F6"/>
+  <rect x="14" y="21" width="4" height="1" rx="0.5" fill="#3B82F6"/>
+  
+  <!-- Chore Icons -->
+  <circle cx="32" cy="12" r="3" fill="white" opacity="0.8"/>
+  <text x="32" y="14" text-anchor="middle" font-size="4" fill="#6B7280">🧹</text>
+  
+  <circle cx="38" cy="20" r="3" fill="white" opacity="0.8"/>
+  <text x="38" y="22" text-anchor="middle" font-size="4" fill="#6B7280">🍳</text>
+  
+  <circle cx="32" cy="28" r="3" fill="white" opacity="0.8"/>
+  <text x="32" y="30" text-anchor="middle" font-size="4" fill="#6B7280">👕</text>
+  
+  <!-- Text -->
+  <text x="48" y="16" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white">Smart</text>
+  <text x="48" y="26" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white">Chore</text>
+  
+  <!-- Sparkle effect -->
+  <circle cx="100" cy="10" r="1" fill="white" opacity="0.8"/>
+  <circle cx="108" cy="15" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="104" cy="30" r="1" fill="white" opacity="0.9"/>
+  
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

@@ -15,37 +15,64 @@ const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo, familyMembers
     return member ? member.name : `メンバー${memberId}`
   }
 
-  // AI分析テキストの`undefined`を修正する関数
+  // AI分析テキストの`undefined`を修正する関数（完全リライト版）
   const fixUndefinedInText = (text) => {
     if (!text || typeof text !== 'string') return text
     
-    // undefined が含まれている場合の修正
+    // 新しい改善提案メッセージを検出して、そのまま返す
+    if (text.includes('Vertex AI') || text.includes('スキルマッチング') || text.includes('スキルベース分担')) {
+      return text // 新しいメッセージはそのまま表示
+    }
+    
     let fixedText = text
     
-    // パターン1: "undefinedさん" を修正
-    familyMembers.forEach((member, index) => {
-      const memberName = member.name || `メンバー${index + 1}`
-      fixedText = fixedText.replace(/undefined(さん)?/g, `${memberName}$1`)
-    })
-    
-    // パターン2: 具体的な統計情報の修正
-    if (debugInfo?.enhancedAssignment?.workloadAnalysis) {
-      const workload = debugInfo.enhancedAssignment.workloadAnalysis
-      Object.keys(workload).forEach(memberId => {
-        const memberName = getMemberName(memberId)
-        const memberData = workload[memberId]
-        if (memberData) {
-          // "undefined: 180分" のようなパターンを修正
-          fixedText = fixedText.replace(
-            new RegExp(`undefined: (\\d+)分`, 'g'), 
-            `${memberName}: $1分`
-          )
-          fixedText = fixedText.replace(
-            new RegExp(`undefined \\((\\d+)件\\)`, 'g'), 
-            `${memberName} ($1件)`
-          )
-        }
+    if (familyMembers.length >= 2) {
+      const member1 = familyMembers[0]
+      const member2 = familyMembers[1]
+      
+      console.log('AI分析修正:', {
+        member1: member1.name,
+        member2: member2.name,
+        originalLength: text.length
       })
+      
+      // 段階的に置換（より安全な方法）
+      // Step 1: 具体的なパターンを先に置換
+      fixedText = fixedText.replace(
+        /(・\s*)undefined(さん: \d+分)、undefined(さん: \d+分)/g, 
+        `$1${member1.name}$2、${member2.name}$3`
+      )
+      
+      // Step 2: 詳細統計の置換（2つのundefinedを区別）
+      let statCount = 0
+      fixedText = fixedText.replace(
+        /(・\s*)undefined(: \d+分 \()undefined(件\))/g, 
+        (match, prefix, middle, suffix) => {
+          const member = statCount === 0 ? member1 : member2
+          statCount++
+          return `${prefix}${member.name}${middle}${member.name}${suffix}`
+        }
+      )
+      
+      // Step 3: まだ残っているundefinedがあれば交互に置換
+      let remainingCount = 0
+      fixedText = fixedText.replace(/\bundefined\b/g, () => {
+        const member = familyMembers[remainingCount % familyMembers.length]
+        remainingCount++
+        return member.name
+      })
+      
+      console.log('修正完了:', {
+        beforeUndefinedCount: (text.match(/undefined/g) || []).length,
+        afterUndefinedCount: (fixedText.match(/undefined/g) || []).length,
+        result: fixedText.substring(0, 200)
+      })
+      
+    } else if (familyMembers.length === 1) {
+      const member = familyMembers[0]
+      fixedText = fixedText.replace(/\bundefined\b/g, member.name)
+    } else {
+      fixedText = fixedText.replace(/\bundefined\b/g, 'メンバー')
     }
     
     return fixedText

@@ -2,6 +2,11 @@ runtime: python39
 service: smart-chore-app
 
 handlers:
+# データ管理ページ
+- url: /data-manager.html
+  static_files: dist/data-manager.html
+  upload: dist/data-manager.html
+
 # 個別ファイル指定（実際のファイル名に合わせる）
 - url: /assets/index-0a1f3e01.js
   static_files: dist/assets/index-0a1f3e01.js
