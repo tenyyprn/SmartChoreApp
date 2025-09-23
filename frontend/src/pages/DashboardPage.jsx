@@ -268,6 +268,7 @@ const DashboardPage = () => {
                 aiSuggestions={aiSuggestions.balanceSuggestions}
                 aiAnalysis={aiSuggestions.aiAnalysis}
                 debugInfo={debugMode ? aiSuggestions.debugInfo : null}
+                familyMembers={familyMembers}
               />
             )}
 

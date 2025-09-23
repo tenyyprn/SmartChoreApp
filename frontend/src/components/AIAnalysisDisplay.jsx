@@ -1,25 +1,72 @@
 import React, { useState } from 'react'
 import { ChevronDown, ChevronUp, Brain, Sparkles } from 'lucide-react'
 
-const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo }) => {
+const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo, familyMembers = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFullResponse, setShowFullResponse] = useState(false)
+
+  // メンバー名を取得するヘルパー関数
+  const getMemberName = (memberId) => {
+    if (!memberId || !familyMembers || familyMembers.length === 0) {
+      return '不明なメンバー'
+    }
+    
+    const member = familyMembers.find(m => m.id === memberId || m.name === memberId)
+    return member ? member.name : `メンバー${memberId}`
+  }
+
+  // AI分析テキストの`undefined`を修正する関数
+  const fixUndefinedInText = (text) => {
+    if (!text || typeof text !== 'string') return text
+    
+    // undefined が含まれている場合の修正
+    let fixedText = text
+    
+    // パターン1: "undefinedさん" を修正
+    familyMembers.forEach((member, index) => {
+      const memberName = member.name || `メンバー${index + 1}`
+      fixedText = fixedText.replace(/undefined(さん)?/g, `${memberName}$1`)
+    })
+    
+    // パターン2: 具体的な統計情報の修正
+    if (debugInfo?.enhancedAssignment?.workloadAnalysis) {
+      const workload = debugInfo.enhancedAssignment.workloadAnalysis
+      Object.keys(workload).forEach(memberId => {
+        const memberName = getMemberName(memberId)
+        const memberData = workload[memberId]
+        if (memberData) {
+          // "undefined: 180分" のようなパターンを修正
+          fixedText = fixedText.replace(
+            new RegExp(`undefined: (\\d+)分`, 'g'), 
+            `${memberName}: $1分`
+          )
+          fixedText = fixedText.replace(
+            new RegExp(`undefined \\((\\d+)件\\)`, 'g'), 
+            `${memberName} ($1件)`
+          )
+        }
+      })
+    }
+    
+    return fixedText
+  }
 
   // AI応答サマリーを取得
   const getAIResponseSummary = () => {
     if (debugInfo?.enhancedAssignment?.aiResponse) {
-      return debugInfo.enhancedAssignment.aiResponse
+      return fixUndefinedInText(debugInfo.enhancedAssignment.aiResponse)
     }
     
     // フォールバック: aiAnalysisから抽出
     if (aiAnalysis && typeof aiAnalysis === 'string') {
-      return aiAnalysis
+      return fixUndefinedInText(aiAnalysis)
     }
     
     return null
   }
 
   const aiResponseSummary = getAIResponseSummary()
+  const fixedAiAnalysis = fixUndefinedInText(aiAnalysis)
 
   if (!aiResponseSummary && (!aiSuggestions || aiSuggestions.length === 0)) {
     return null
@@ -49,13 +96,13 @@ const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo }) => {
       </div>
 
       {/* AI分析サマリー */}
-      {aiAnalysis && (
+      {fixedAiAnalysis && (
         <div className="mb-3">
           <div className="bg-white rounded-lg p-3 border border-blue-100">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-blue-600 font-medium">総合評価:</span>
             </div>
-            <p className="text-gray-700">{aiAnalysis}</p>
+            <p className="text-gray-700 whitespace-pre-line">{fixedAiAnalysis}</p>
           </div>
         </div>
       )}
@@ -91,6 +138,33 @@ const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo }) => {
       {/* 展開可能な詳細情報 */}
       {isExpanded && (
         <div className="space-y-3">
+          {/* メンバー別統計情報 */}
+          {debugInfo?.enhancedAssignment?.workloadAnalysis && (
+            <div>
+              <h4 className="font-medium text-gray-800 mb-2">メンバー別詳細:</h4>
+              <div className="space-y-2">
+                {Object.entries(debugInfo.enhancedAssignment.workloadAnalysis).map(([memberId, workload]) => {
+                  const memberName = getMemberName(memberId)
+                  return (
+                    <div key={memberId} className="bg-white p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-800">{memberName}</span>
+                        <div className="text-sm text-gray-600">
+                          {workload.totalMinutes || 0}分 • {workload.taskCount || 0}件
+                        </div>
+                      </div>
+                      {workload.averageComparison && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          平均と比較して {Math.round(workload.averageComparison * 100)}%
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* AI提案一覧 */}
           {aiSuggestions && aiSuggestions.length > 0 && (
             <div>
@@ -115,7 +189,7 @@ const AIAnalysisDisplay = ({ aiSuggestions, aiAnalysis, debugInfo }) => {
                         {suggestion.type === 'warning' && '⚠️ '}
                         {suggestion.type === 'info' && 'ℹ️ '}
                         {suggestion.type === 'tip' && '💡 '}
-                        {suggestion.message}
+                        {fixUndefinedInText(suggestion.message)}
                       </span>
                       {suggestion.priority && (
                         <span className={`text-xs px-2 py-1 rounded ${

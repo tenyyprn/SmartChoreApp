@@ -7,12 +7,19 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, 
          isSameDay, startOfWeek, endOfWeek, isToday, isThisMonth } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import ScheduleManager from '../components/ScheduleManager'
 
 const CalendarPage = () => {
   const { choreAssignments = [], familyMembers = [] } = useChore()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(null)
-  const [viewMode, setViewMode] = useState('month') // 'month' | 'week' | 'stats'
+  const [viewMode, setViewMode] = useState('month') // 'month' | 'week' | 'stats' | 'schedule'
+  const [availabilityData, setAvailabilityData] = useState([])
+
+  // 在宅状況の変更を処理
+  const handleAvailabilityChange = (weeklyAnalysis) => {
+    setAvailabilityData(weeklyAnalysis)
+  }
 
   // 月間の日付範囲を計算
   const monthStart = startOfMonth(currentDate)
@@ -349,10 +356,10 @@ const CalendarPage = () => {
       </div>
 
       {/* ビュー切り替え */}
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 overflow-x-auto">
         <button
           onClick={() => setViewMode('month')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
             viewMode === 'month' 
               ? 'bg-purple-100 text-purple-700 border border-purple-300' 
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -363,8 +370,20 @@ const CalendarPage = () => {
         </button>
         
         <button
+          onClick={() => setViewMode('schedule')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            viewMode === 'schedule' 
+              ? 'bg-purple-100 text-purple-700 border border-purple-300' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Clock className="w-4 h-4 inline mr-2" />
+          予定管理
+        </button>
+        
+        <button
           onClick={() => setViewMode('stats')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
             viewMode === 'stats' 
               ? 'bg-purple-100 text-purple-700 border border-purple-300' 
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -377,6 +396,12 @@ const CalendarPage = () => {
 
       {/* コンテンツ表示 */}
       {viewMode === 'month' && renderCalendarView()}
+      {viewMode === 'schedule' && (
+        <ScheduleManager 
+          familyMembers={familyMembers}
+          onAvailabilityChange={handleAvailabilityChange}
+        />
+      )}
       {viewMode === 'stats' && renderStatsView()}
     </div>
   )

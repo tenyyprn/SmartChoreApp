@@ -1,312 +1,152 @@
-// Google Calendar API service for calendar integration
-class GoogleCalendarService {
+// 在宅状況を考慮したカレンダーサービス
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
+
+export class CalendarService {
   constructor() {
-    this.apiKey = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY
-    this.discoveryDoc = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'
-    this.scopes = 'https://www.googleapis.com/auth/calendar.events'
-    this.gapi = null
-    this.initialized = false
+    this.storageKey = 'smartChore_familySchedule'
   }
 
-  async initialize() {
-    if (this.initialized) return true
-
+  // 家族の予定を保存
+  saveFamilySchedule(schedule) {
     try {
-      // Load Google API library
-      await this.loadGoogleAPI()
-      
-      // Initialize the API
-      await this.gapi.load('client:auth2', async () => {
-        await this.gapi.client.init({
-          apiKey: this.apiKey,
-          discoveryDocs: [this.discoveryDoc],
-        })
-      })
-
-      this.initialized = true
-      console.log('📅 Google Calendar API initialized')
-      return true
+      localStorage.setItem(this.storageKey, JSON.stringify(schedule))
     } catch (error) {
-      console.error('Failed to initialize Google Calendar API:', error)
-      return false
+      console.error('予定保存エラー:', error)
     }
   }
 
-  loadGoogleAPI() {
-    return new Promise((resolve, reject) => {
-      if (window.gapi) {
-        this.gapi = window.gapi
-        resolve()
-        return
-      }
-
-      const script = document.createElement('script')
-      script.src = 'https://apis.google.com/js/api.js'
-      script.onload = () => {
-        this.gapi = window.gapi
-        resolve()
-      }
-      script.onerror = reject
-      document.head.appendChild(script)
-    })
-  }
-
-  async signIn() {
+  // 家族の予定を読み込み
+  loadFamilySchedule() {
     try {
-      if (!this.initialized) {
-        await this.initialize()
-      }
-
-      const authInstance = this.gapi.auth2.getAuthInstance()
-      if (!authInstance.isSignedIn.get()) {
-        await authInstance.signIn()
-      }
-      
-      console.log('📅 Signed in to Google Calendar')
-      return true
+      const saved = localStorage.getItem(this.storageKey)
+      return saved ? JSON.parse(saved) : []
     } catch (error) {
-      console.error('Failed to sign in to Google Calendar:', error)
-      return false
-    }
-  }
-
-  async createChoreEvent(choreData) {
-    try {
-      if (!await this.signIn()) {
-        throw new Error('Failed to authenticate with Google Calendar')
-      }
-
-      const event = {
-        summary: `🏠 ${choreData.name}`,
-        description: this.formatChoreDescription(choreData),
-        start: {
-          dateTime: this.calculateEventTime(choreData),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        },
-        end: {
-          dateTime: this.calculateEventEndTime(choreData),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        },
-        attendees: choreData.assignedTo ? [{
-          email: choreData.assignedTo.email,
-          displayName: choreData.assignedTo.memberName
-        }] : [],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'popup', minutes: 30 },
-            { method: 'email', minutes: 60 }
-          ]
-        },
-        colorId: this.getChoreColorId(choreData.category),
-        extendedProperties: {
-          private: {
-            choreId: choreData.id,
-            choreApp: 'SmartChoreApp',
-            difficulty: choreData.difficulty?.toString(),
-            estimatedTime: choreData.estimatedTime?.toString()
-          }
-        }
-      }
-
-      const response = await this.gapi.client.calendar.events.insert({
-        calendarId: 'primary',
-        resource: event
-      })
-
-      console.log('📅 Chore event created:', response.result.id)
-      return {
-        calendarEventId: response.result.id,
-        htmlLink: response.result.htmlLink,
-        success: true
-      }
-    } catch (error) {
-      console.error('Failed to create calendar event:', error)
-      return {
-        success: false,
-        error: error.message
-      }
-    }
-  }
-
-  formatChoreDescription(choreData) {
-    return `
-🏠 家事: ${choreData.name}
-👤 担当者: ${choreData.assignedTo?.memberName || '未指定'}
-⏱️ 推定時間: ${choreData.estimatedTime || 30}分
-🎯 難易度: ${choreData.difficulty || 5}/10
-📂 カテゴリ: ${choreData.category || 'その他'}
-
-${choreData.mealTask ? '🍴 毎日の食事タスクです' : ''}
-${choreData.manuallyAdded ? '➕ 手動で追加されたタスクです' : ''}
-
-Smart Chore App で管理されています
-`.trim()
-  }
-
-  calculateEventTime(choreData) {
-    const now = new Date()
-    const eventDate = choreData.date ? new Date(choreData.date) : now
-    
-    // Set time based on timeSlot
-    switch (choreData.timeSlot) {
-      case 'morning':
-        eventDate.setHours(8, 0, 0, 0)
-        break
-      case 'afternoon':
-        eventDate.setHours(13, 0, 0, 0)
-        break
-      case 'evening':
-        eventDate.setHours(18, 0, 0, 0)
-        break
-      default:
-        eventDate.setHours(10, 0, 0, 0)
-    }
-
-    return eventDate.toISOString()
-  }
-
-  calculateEventEndTime(choreData) {
-    const startTime = new Date(this.calculateEventTime(choreData))
-    const duration = choreData.estimatedTime || 30
-    startTime.setMinutes(startTime.getMinutes() + duration)
-    return startTime.toISOString()
-  }
-
-  getChoreColorId(category) {
-    const colorMap = {
-      '料理': '4', // Blue
-      'キッチン': '4', // Blue
-      '掃除': '2', // Green
-      '洗濯': '6', // Orange
-      'ゴミ': '8', // Gray
-      '買い物': '9', // Bold Blue
-      '手動追加': '10', // Bold Green
-      'default': '1' // Lavender
-    }
-    return colorMap[category] || colorMap.default
-  }
-
-  async updateChoreEvent(calendarEventId, choreData) {
-    try {
-      if (!await this.signIn()) {
-        throw new Error('Failed to authenticate with Google Calendar')
-      }
-
-      const updatedEvent = {
-        summary: `🏠 ${choreData.name}`,
-        description: this.formatChoreDescription(choreData),
-        start: {
-          dateTime: this.calculateEventTime(choreData),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        },
-        end: {
-          dateTime: this.calculateEventEndTime(choreData),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        }
-      }
-
-      const response = await this.gapi.client.calendar.events.patch({
-        calendarId: 'primary',
-        eventId: calendarEventId,
-        resource: updatedEvent
-      })
-
-      console.log('📅 Chore event updated:', response.result.id)
-      return { success: true }
-    } catch (error) {
-      console.error('Failed to update calendar event:', error)
-      return { success: false, error: error.message }
-    }
-  }
-
-  async deleteChoreEvent(calendarEventId) {
-    try {
-      if (!await this.signIn()) {
-        throw new Error('Failed to authenticate with Google Calendar')
-      }
-
-      await this.gapi.client.calendar.events.delete({
-        calendarId: 'primary',
-        eventId: calendarEventId
-      })
-
-      console.log('📅 Chore event deleted:', calendarEventId)
-      return { success: true }
-    } catch (error) {
-      console.error('Failed to delete calendar event:', error)
-      return { success: false, error: error.message }
-    }
-  }
-
-  async getCalendarEvents(startDate, endDate) {
-    try {
-      if (!await this.signIn()) {
-        throw new Error('Failed to authenticate with Google Calendar')
-      }
-
-      const response = await this.gapi.client.calendar.events.list({
-        calendarId: 'primary',
-        timeMin: startDate.toISOString(),
-        timeMax: endDate.toISOString(),
-        showDeleted: false,
-        singleEvents: true,
-        orderBy: 'startTime',
-        q: 'Smart Chore App' // Filter for our app's events
-      })
-
-      return response.result.items.map(event => ({
-        id: event.id,
-        title: event.summary,
-        start: event.start.dateTime || event.start.date,
-        end: event.end.dateTime || event.end.date,
-        description: event.description,
-        choreId: event.extendedProperties?.private?.choreId,
-        difficulty: parseInt(event.extendedProperties?.private?.difficulty) || null,
-        estimatedTime: parseInt(event.extendedProperties?.private?.estimatedTime) || null
-      }))
-    } catch (error) {
-      console.error('Failed to get calendar events:', error)
+      console.error('予定読み込みエラー:', error)
       return []
     }
   }
 
-  async bulkCreateChoreEvents(choreAssignments) {
-    const results = []
+  // 新しい予定を追加
+  addEvent(event) {
+    const schedule = this.loadFamilySchedule()
+    const newEvent = {
+      id: Date.now(),
+      ...event,
+      createdAt: new Date().toISOString()
+    }
+    schedule.push(newEvent)
+    this.saveFamilySchedule(schedule)
+    return newEvent
+  }
+
+  // 予定を削除
+  deleteEvent(eventId) {
+    const schedule = this.loadFamilySchedule()
+    const updatedSchedule = schedule.filter(event => event.id !== eventId)
+    this.saveFamilySchedule(updatedSchedule)
+  }
+
+  // 特定の日時でメンバーが在宅かどうかチェック
+  isAvailableAt(memberId, dateTime) {
+    const schedule = this.loadFamilySchedule()
+    const memberEvents = schedule.filter(event => event.memberId === memberId)
     
-    for (const chore of choreAssignments) {
-      const result = await this.createChoreEvent(chore)
-      results.push({
-        choreId: chore.id,
-        calendarResult: result
-      })
+    const checkDateTime = typeof dateTime === 'string' ? parseISO(dateTime) : dateTime
+    
+    return !memberEvents.some(event => {
+      const startTime = parseISO(event.startTime)
+      const endTime = parseISO(event.endTime)
       
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-
-    console.log('📅 Bulk calendar events created:', results.length)
-    return results
+      return isWithinInterval(checkDateTime, { start: startTime, end: endTime })
+    })
   }
 
-  isSignedIn() {
-    if (!this.initialized || !this.gapi?.auth2) return false
+  // 特定の日に在宅可能なメンバーを取得
+  getAvailableMembersForDay(date, familyMembers) {
+    const dayStart = startOfDay(date)
+    const dayEnd = endOfDay(date)
     
-    const authInstance = this.gapi.auth2.getAuthInstance()
-    return authInstance.isSignedIn.get()
+    return familyMembers.filter(member => {
+      // その日の朝6時から夜10時までの間で在宅時間があるかチェック
+      const morningCheck = new Date(date)
+      morningCheck.setHours(6, 0, 0, 0)
+      
+      const eveningCheck = new Date(date)
+      eveningCheck.setHours(22, 0, 0, 0)
+      
+      // 朝または夜に在宅していれば家事が可能とみなす
+      return this.isAvailableAt(member.id, morningCheck) || 
+             this.isAvailableAt(member.id, eveningCheck)
+    })
   }
 
-  async signOut() {
-    try {
-      if (this.isSignedIn()) {
-        const authInstance = this.gapi.auth2.getAuthInstance()
-        await authInstance.signOut()
-        console.log('📅 Signed out from Google Calendar')
-      }
-    } catch (error) {
-      console.error('Failed to sign out:', error)
+  // 特定の期間でメンバーの在宅率を計算
+  calculateAvailabilityRate(memberId, startDate, endDate) {
+    const schedule = this.loadFamilySchedule()
+    const memberEvents = schedule.filter(event => 
+      event.memberId === memberId &&
+      parseISO(event.startTime) >= startDate &&
+      parseISO(event.endTime) <= endDate
+    )
+
+    // 簡易計算：イベント数から在宅率を推定
+    const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
+    const busyDays = memberEvents.length
+    
+    return Math.max(0, (totalDays - busyDays) / totalDays)
+  }
+
+  // 家事分担時の在宅状況分析
+  analyzeAvailabilityForChores(familyMembers, targetDate) {
+    const availableMembers = this.getAvailableMembersForDay(targetDate, familyMembers)
+    
+    const analysis = {
+      date: format(targetDate, 'yyyy-MM-dd'),
+      totalMembers: familyMembers.length,
+      availableMembers: availableMembers.length,
+      availabilityRate: familyMembers.length > 0 ? availableMembers.length / familyMembers.length : 0,
+      unavailableMembers: familyMembers.filter(member => 
+        !availableMembers.some(available => available.id === member.id)
+      ),
+      recommendations: []
     }
+
+    // 推奨事項を生成
+    if (analysis.availabilityRate < 0.5) {
+      analysis.recommendations.push({
+        type: 'warning',
+        message: `${format(targetDate, 'M月d日')}は在宅メンバーが少ないため、前日または翌日に家事を調整することをお勧めします`
+      })
+    }
+
+    if (analysis.availableMembers.length === 1) {
+      analysis.recommendations.push({
+        type: 'info',
+        message: `在宅メンバーが${availableMembers[0].name}さんのみです。負荷を軽減するため簡単な家事を中心に計画しましょう`
+      })
+    }
+
+    return analysis
+  }
+
+  // 週間の在宅パターンを分析
+  analyzeWeeklyPattern(familyMembers, weekStart) {
+    const weekDays = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart)
+      date.setDate(date.getDate() + i)
+      weekDays.push(date)
+    }
+
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土']
+
+    return weekDays.map(date => ({
+      date: format(date, 'yyyy-MM-dd'),
+      dayOfWeek: dayNames[date.getDay()],
+      availableMembers: this.getAvailableMembersForDay(date, familyMembers),
+      analysis: this.analyzeAvailabilityForChores(familyMembers, date)
+    }))
   }
 }
 
-export const googleCalendarService = new GoogleCalendarService()
+export default CalendarService

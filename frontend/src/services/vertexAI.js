@@ -1,5 +1,6 @@
 // Vertex AI Enhanced Chore Assignment System
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import CalendarService from './calendar'
 
 export class VertexAIChoreAssignment {
   constructor() {
@@ -8,6 +9,9 @@ export class VertexAIChoreAssignment {
     this.projectId = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT_ID || 'compact-haiku-454409-j0'
     this.location = import.meta.env.VITE_VERTEX_AI_LOCATION || 'asia-northeast1'
     this.apiKey = import.meta.env.VITE_GEMINI_API_KEY
+    
+    // カレンダーサービスの初期化
+    this.calendarService = new CalendarService()
     
     // Initialize Gemini API (Vertex AI経由)
     if (this.apiKey && this.apiKey !== 'YOUR_NEW_API_KEY_HERE' && !this.mockMode) {
@@ -30,25 +34,29 @@ export class VertexAIChoreAssignment {
     }
   }
 
-  async calculateOptimalAssignment(familyMembers, chores) {
+  async calculateOptimalAssignment(familyMembers, chores, targetDate = new Date()) {
     if (this.debugMode) {
       console.log('🧠 Vertex AI分担計算開始')
       console.log('家族メンバー:', familyMembers.length, '人')
       console.log('家事数:', chores.length, '件')
+      console.log('対象日:', targetDate.toISOString().split('T')[0])
     }
 
     try {
-      // Step 1: 基本分担計算（既存ロジック）
-      const basicAssignment = await this.calculateBasicAssignment(familyMembers, chores)
+      // Step 1: カレンダー情報の取得と在宅状況分析
+      const availabilityAnalysis = this.calendarService.analyzeAvailabilityForChores(familyMembers, targetDate)
       
-      // Step 2: Vertex AI (Gemini)による分担最適化
-      const enhancedAssignment = await this.enhanceWithVertexAI(basicAssignment, familyMembers, chores)
+      // Step 2: 在宅状況を考慮した基本分担計算
+      const basicAssignment = await this.calculateBasicAssignment(familyMembers, chores, availabilityAnalysis)
       
-      // Step 3: 公平性計算の高度化
+      // Step 3: Vertex AI (Gemini)による分担最適化（カレンダー情報込み）
+      const enhancedAssignment = await this.enhanceWithVertexAI(basicAssignment, familyMembers, chores, availabilityAnalysis)
+      
+      // Step 4: 公平性計算の高度化
       const fairnessAnalysis = await this.calculateAdvancedFairness(enhancedAssignment.workloadAnalysis)
       
-      // Step 4: AIによる改善提案生成
-      const aiSuggestions = await this.generateAISuggestions(enhancedAssignment, fairnessAnalysis)
+      // Step 5: AIによる改善提案生成（在宅状況を考慮）
+      const aiSuggestions = await this.generateAISuggestions(enhancedAssignment, fairnessAnalysis, availabilityAnalysis)
       
       const result = {
         assignments: enhancedAssignment.assignments,
@@ -56,19 +64,22 @@ export class VertexAIChoreAssignment {
         workloadAnalysis: enhancedAssignment.workloadAnalysis,
         balanceSuggestions: aiSuggestions,
         calendarConsidered: true,
+        availabilityAnalysis: availabilityAnalysis,
         vertexAIEnhanced: !this.mockMode,
         aiAnalysis: fairnessAnalysis.analysis,
         generatedAt: new Date().toISOString(),
         debugInfo: this.debugMode ? { 
           basicAssignment, 
           enhancedAssignment, 
-          fairnessAnalysis 
+          fairnessAnalysis,
+          availabilityAnalysis
         } : undefined
       }
 
       if (this.debugMode) {
         console.log('🎯 Vertex AI強化版 公平性スコア:', Math.round(fairnessAnalysis.score * 100) + '%')
         console.log('📊 AI分析:', fairnessAnalysis.analysis)
+        console.log('📅 在宅状況:', availabilityAnalysis)
       }
 
       return result
