@@ -1,0 +1,26 @@
+# Simple Node.js build for Cloud Run
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY frontend/ ./
+
+# Build the application
+RUN npm run build
+
+# Install serve to run the built app
+RUN npm install -g serve
+
+# Expose port 8080 (required by Cloud Run)
+EXPOSE 8080
+
+# Serve the built app
+CMD ["serve", "-s", "dist", "-l", "8080"]

@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "compact-haiku-454409-j0",
+  "private_key_id": "355e926eb1dc0ae0acc939e9662e662a2df6f3a3",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0OqCvBHK6pW+z\n49ayOLwxKmjGsojpKZ6ng5UWkpAwET4ZZaKO8DFipM0xTuyMEu7ymOQuv4e2Z3Uc\nVe6yRNCk9gSoL8Uj2TMf+ZHusFhzB+2kw38/E/MAh4ComCyeG6O2F5l/sUZiFPFs\nHw8OLYbN+8tiDIUWxSsLSEoxJg3AkifymJLD7V3Ni60zCWyB2DBilj2VBHgLFJlJ\n0pPysh9OdB7aDesL1wRhEkBeRUALyYRrMVXH2W+vhgzcGbLc9wAOwUa68uu7XG0+\nJwTg+IPucpGt5DX92UqKLkaUQzp7LlyNUjwzTxV+1KylS8fj6y16Tja9iLsAgAda\nsV5IROOnAgMBAAECggEAEPZTmSU6Bwb69FtFIZDlZVswcULsT8VzASEJLw6sM1ns\nFkfSfNFuVHJePX3IFYbSplJtZ1jvVON3yirsRCrl2CCvX4TfcPhIL4I1kdlW+byN\nSSx9FVqzTCF0omlwCZFgXwrpj3MHxMNj1WE28YanYUuJYLj87Z+w5WbwVJ/YO39d\nfEr7dj2HM8AlBmVBB/j/1kBDCPsCcfX9oDa6CXjUoCmA+hzvN+IISsFwZ20xsl7u\nqj/Q1j+P3MkzF/NLtwkii/vRpJ6IPbmb0+YdYxOlBRp5A6wgPW8QFEgWep7MptI2\nRfTgO4T591ZJ2RQXciIk4/yE2g5py96i+lMfQPFLQQKBgQDfhZo9qnY1tqpKM98l\nKHBz8AFZCPxF686ZCqIxbCRWbQa16smMelzj0755oadllygtiAAWizR9fZ1X8v+l\n4louektRhbmwO+KVHbkhR7rb3WYDvwD2MBkaUv8h4XAJed71G2YCs8Y/mWDfuWDu\nnq+WB6Z4ep0MrCdyW4kJprdfUwKBgQDOaqZaXH7mSwmH6dH7GJLoo7gJBPlxqrXq\nEy33mgZkkHz35GWEjXDSqCZ8/SGgCQY8RojGyb5CXgaYTsWPtFoDgUU/O9tlfWgu\njz+uwV/aLEwNLhfhcM87srHZ4MJJrLAlseADsR+vM3hmWT4rBmlz/2FRFKHPGzfC\nHR6i0qvj3QKBgQCViCh2ZoosRuZHO8plbldEiGQubx9tm2Ib6gw1afYpR0i8/LQW\n4WkxFN+ROT7mbKf5RclhS4EzDozrYGn8TKAuBaxLfl2J85YSUc8e34C3Q7bSfL4k\n9GpmvO1negxcmoY4jTrCRggzVeWD5d1d5RTsFnQcl1JnPugozemwZjK4dwKBgGkf\nJ1kdggMGc/QjwCyAd1DDEBaH0gFxTvPGkMJoTpkofHxCdPDsl2iw+ejtgRJfhi1s\nPnv+gkaKXBF1DGgDEVR3oSxy72jgVQ5hJa16DbaumIydzMujB+b/OlQbgtbCe3K3\nA77dlaVEMSzuhhqjSVEp3gXM3Br9YYgaDGAfqiqBAoGADRbLazix5tpoeAVqcspx\nN6y1UwAi/6aHEG6Se8FzFpVt2mTpPvLcnVMSqMJMqYBSKLH0FMbxQKIh43SJUWGD\nm4MYz5ZFl1uqE+ocKNoXjjqtxN4oLpuGdTXoyq9QfTDt4MDrBDfMWeMGo5K4rnkS\nXdctAsxNJEJl0e77NGrL3jE=\n-----END PRIVATE KEY-----\n",
+  "client_email": "smart-chore-ai@compact-haiku-454409-j0.iam.gserviceaccount.com",
+  "client_id": "103638760904105257432",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/smart-chore-ai%40compact-haiku-454409-j0.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

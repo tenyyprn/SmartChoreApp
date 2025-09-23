@@ -1,0 +1,34 @@
+runtime: python39
+service: smart-chore-app
+
+handlers:
+# 個別ファイル指定（実際のファイル名に合わせる）
+- url: /assets/index-0a1f3e01.js
+  static_files: dist/assets/index-0a1f3e01.js
+  upload: dist/assets/index-0a1f3e01.js
+
+- url: /assets/index-572d7813.css
+  static_files: dist/assets/index-572d7813.css
+  upload: dist/assets/index-572d7813.css
+
+- url: /assets/index-59202704.js
+  static_files: dist/assets/index-59202704.js
+  upload: dist/assets/index-59202704.js
+
+- url: /assets/DashboardPage-91abf341.js
+  static_files: dist/assets/DashboardPage-91abf341.js
+  upload: dist/assets/DashboardPage-91abf341.js
+
+# その他の全アセット
+- url: /assets/(.+)
+  static_files: dist/assets/\1
+  upload: dist/assets/.*
+
+# メインページ
+- url: /
+  static_files: dist/index.html
+  upload: dist/index.html
+
+- url: /.*
+  static_files: dist/index.html
+  upload: dist/index.html

@@ -1,0 +1,27 @@
+{
+  "name": "smart-chore-app",
+  "version": "1.0.0",
+  "description": "AI-powered smart chore assignment system for families",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm start",
+    "build": "cd frontend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "chore",
+    "family",
+    "ai",
+    "management",
+    "task",
+    "assignment"
+  ],
+  "author": "SmartChoreApp Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

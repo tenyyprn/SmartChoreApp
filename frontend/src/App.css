@@ -1,0 +1,89 @@
+/* App.css - アプリケーション固有のスタイル */
+
+.App {
+  text-align: center;
+}
+
+/* カスタムアニメーション */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* スキルバーのアニメーション */
+.skill-progress {
+  transition: width 0.8s ease-in-out;
+}
+
+/* カードのホバー効果 */
+.card-hover {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 完了状態のチェックボックス */
+.checkbox-completed {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #16a34a;
+}
+
+/* 負荷バランスのプログレスバー */
+.workload-bar {
+  background: linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #ef4444 100%);
+}
+
+/* ローディング状態 */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.4s ease-in-out infinite;
+}
+
+@keyframes loading-dots {
+  0%, 61.11% {
+    content: '.';
+  }
+  33.33% {
+    content: '..';
+  }
+  66.66% {
+    content: '...';
+  }
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .grid-responsive {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* ダークモード対応（将来的な拡張用） */
+@media (prefers-color-scheme: dark) {
+  /* ダークモードスタイルは将来的に実装 */
+}

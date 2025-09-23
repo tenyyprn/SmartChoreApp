@@ -1,0 +1,9 @@
+runtime: nodejs18
+service: smart-chore-app
+
+env_variables:
+  NODE_ENV: production
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10
