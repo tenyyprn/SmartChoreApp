@@ -128,9 +128,9 @@ npm run build
 
 ## 👨‍💻 作者
 
-- **開発者**: [Your Name]
-- **Email**: [your.email@example.com]
-- **GitHub**: [@yourusername]
+- **開発者**: [tenyyprn]
+- **Email**: [tenyyprn@gmail.com]
+- **GitHub**: [@tenyyprn]
 
 ## 🙏 謝辞
 
