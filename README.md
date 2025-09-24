@@ -9,7 +9,7 @@
 
 Google Vertex AIとGemini 1.5 Flashを活用し、各家族メンバーのスキルと作業負荷を分析して**公平性スコア88%以上**を実現する効率的な家事分担を自動提案します。
 
-📱 **[デモを試す](https://compact-haiku-454409-j0.appspot.com/)**
+📱 **[デモを試す]https://smart-chore-app-dot-compact-haiku-454409-j0.an.r.appspot.com/**
 
 ---
 
