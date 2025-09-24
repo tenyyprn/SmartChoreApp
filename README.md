@@ -175,7 +175,7 @@ SmartChoreApp/
 | **トリガー** | GitHub main ブランチへのpush |
 | **ビルド** | Google Cloud Build |
 | **デプロイ** | App Engine Standard Environment |
-| **URL** | https://compact-haiku-454409-j0.appspot.com/ |
+| **URL** | https://smart-chore-app-dot-compact-haiku-454409-j0.an.r.appspot.com/ |
 
 ---
 
