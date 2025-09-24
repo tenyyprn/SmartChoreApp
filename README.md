@@ -271,46 +271,6 @@ SmartChoreApp/
 
 ---
 
-## 🤝 コントリビューション
-
-### 開発参加手順
-
-1. 🍴 このリポジトリをFork
-2. 🌿 Feature Branch作成 (`git checkout -b feature/amazing-feature`)
-3. 💾 変更をCommit (`git commit -m 'Add amazing feature'`)
-4. ⬆️ BranchへPush (`git push origin feature/amazing-feature`)
-5. 📥 Pull Request作成
-
-### 🐛 バグレポート
-
-GitHub Issuesでの報告時に以下を含めてください：
-- 🔄 再現手順の詳細
-- 💻 環境情報（OS、ブラウザ、バージョン）
-- 📸 スクリーンショット（可能な場合）
-- ❌ エラーメッセージ
-
----
-
-## 📄 ライセンス
-
-MIT License
-
----
-
-## 👨‍💻 開発者情報
-
-<table>
-<tr>
-<td align="center">
-<img src="https://github.com/tenyyprn.png" width="100px;" alt=""/><br />
-<b>@tenyyprn</b><br />
-📧 tenyyprn@gmail.com<br />
-🌐 <a href="https://compact-haiku-454409-j0.appspot.com/">Demo Site</a>
-</td>
-</tr>
-</table>
-
----
 
 ## 🙏 クレジット
 
@@ -319,10 +279,6 @@ MIT License
 - **React** - UIフレームワーク  
 - **Tailwind CSS** - スタイリングシステム
 - **Lucide** - アイコンライブラリ
-
-### 参考資料
-- Material Design - デザインガイドライン
-- 家事効率化に関する学術研究
 
 ---
 
