@@ -1,139 +1,336 @@
-# Smart Chore App 🏠
+# 🏠 SmartChoreApp
 
-AI技術を活用した公平で効率的な家事分担システム
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://compact-haiku-454409-j0.appspot.com/)
+[![AI Platform](https://img.shields.io/badge/AI-Vertex%20AI-blue.svg)](https://cloud.google.com/vertex-ai)
+[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 🌟 機能
+> **Vertex AI駆動による次世代家事分担システム**
 
-- **AI家事分担**: スキルや負荷を考慮した自動タスク割り当て
-- **リアルタイム進捗管理**: タスクの完了状況をリアルタイムで追跡
-- **家族メンバー管理**: アバター・スキル・年齢層設定
-- **統計・分析**: 完了率、作業時間、公平性の分析
-- **レスポンシブデザイン**: PC・スマートフォン対応
+Google Vertex AIとGemini 1.5 Flashを活用し、各家族メンバーのスキルと作業負荷を分析して**公平性スコア88%以上**を実現する効率的な家事分担を自動提案します。
+
+📱 **[デモを試す](https://compact-haiku-454409-j0.appspot.com/)**
+
+---
+
+## ✨ 主要機能
+
+### 🤖 AI駆動家事分担
+- **Vertex AI (Gemini 1.5 Flash)** による高度な分担最適化
+- **スキルマッチング** - 各メンバーの得意分野を考慮した割り当て
+- **負荷バランス** - 公平性スコア88%以上を実現
+- **リアルタイム最適化** - 進捗に応じた動的再分散
+
+### 👥 家族管理
+- **詳細プロフィール** - アバター、年齢、10段階スキル評価
+- **6つのスキルカテゴリ** - 料理・掃除・洗濯・買い物・育児・メンテナンス
+- **学習機能** - 利用パターンから最適化を改善
+
+### 📊 分析・レポート
+- **公平性分析** - リアルタイム公平性スコア計算
+- **ワークロード可視化** - メンバー別作業時間・タスク数
+- **AI改善提案** - 具体的な分担改善アドバイス
+- **パフォーマンス追跡** - 完了率・効率性の統計
+
+---
 
 ## 🛠 技術スタック
 
-### フロントエンド
-- **React 18** - ユーザーインターフェース
-- **TypeScript** - 型安全性
+<table>
+<tr>
+<td valign="top" width="33%">
+
+### Frontend
+- **React 18** - UIフレームワーク
+- **Vite** - ビルドシステム
 - **Tailwind CSS** - スタイリング
-- **Vite** - ビルドツール
-- **React Router** - ルーティング
+- **React Router 6** - SPAルーティング
+- **React Context** - 状態管理
+- **Lucide React** - アイコンライブラリ
 
-### バックエンド
-- **React Context API** - 状態管理
-- **localStorage** - データ永続化
+</td>
+<td valign="top" width="33%">
 
-### デプロイ
-- **Google App Engine** - ホスティング
-- **GitHub** - ソースコード管理
+### AI/ML
+- **Google Vertex AI** - エンタープライズAI
+- **Gemini 1.5 Flash** - 生成AIモデル
+- **カスタムアルゴリズム** - スキル考慮最適化
+- **統計計算エンジン** - 公平性分析
+
+</td>
+<td valign="top" width="33%">
+
+### Infrastructure
+- **Google App Engine** - サーバーレス実行環境
+- **Google Cloud Build** - CI/CDパイプライン
+- **GitHub Actions** - 自動デプロイ
+- **Local Storage** - クライアントサイド永続化
+
+</td>
+</tr>
+</table>
+
+---
 
 ## 📁 プロジェクト構成
 
 ```
 SmartChoreApp/
-├── frontend/                 # フロントエンドアプリケーション
-│   ├── src/
-│   │   ├── components/       # Reactコンポーネント
-│   │   ├── contexts/         # Context API
-│   │   ├── pages/           # ページコンポーネント
-│   │   └── utils/           # ユーティリティ関数
-│   ├── public/              # 静的ファイル
-│   ├── dist/                # ビルド成果物
-│   ├── package.json         # 依存関係
-│   ├── app.yaml            # Google App Engine設定
-│   └── vite.config.js      # Vite設定
-└── README.md               # このファイル
+├── 📁 frontend/
+│   ├── 📁 src/
+│   │   ├── 🧩 components/          # 再利用可能コンポーネント
+│   │   │   ├── AIAnalysisDisplay.jsx
+│   │   │   ├── Navigation.jsx
+│   │   │   └── TaskCompletionCelebration.jsx
+│   │   ├── 🎯 contexts/            # 状態管理
+│   │   │   └── ChoreContext.jsx
+│   │   ├── 📄 pages/              # ページコンポーネント
+│   │   │   ├── DashboardPage.jsx
+│   │   │   ├── AssignmentPage.jsx
+│   │   │   └── SetupPage.jsx
+│   │   ├── ⚙️ services/           # ビジネスロジック
+│   │   │   ├── vertexAI.js
+│   │   │   ├── choreDatabase.js
+│   │   │   └── calendar.js
+│   │   └── 🔧 utils/              # ユーティリティ
+│   ├── package.json
+│   ├── app.yaml
+│   └── vite.config.js
+└── README.md
 ```
+
+---
 
 ## 🚀 セットアップ
 
-### 前提条件
-- Node.js 18以上
-- npm または yarn
-- Google Cloud CLI（デプロイ用）
+### 📋 前提条件
 
-### ローカル開発
+| 要件 | バージョン | 推奨 |
+|------|-----------|------|
+| Node.js | 18+ | 18.17.0以上 |
+| npm/yarn | latest | npm 9+ |
+| Google Cloud CLI | latest | デプロイ用 |
+| Vertex AI API | 有効化済み | Google Cloud Project |
 
-1. **リポジトリのクローン**
+### 💻 ローカル開発
+
+1. **📥 リポジトリクローン**
    ```bash
-   git clone https://github.com/yourusername/SmartChoreApp.git
+   git clone https://github.com/tenyyprn/SmartChoreApp.git
    cd SmartChoreApp/frontend
    ```
 
-2. **依存関係のインストール**
+2. **📦 依存関係インストール**
    ```bash
    npm install
    ```
 
-3. **開発サーバーの起動**
+3. **🔐 環境変数設定**
+   
+   `.env.local` ファイルを作成:
+   ```env
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
+   VITE_GOOGLE_CLOUD_PROJECT_ID=your_project_id
+   VITE_VERTEX_AI_LOCATION=asia-northeast1
+   VITE_MOCK_MODE=false
+   ```
+
+4. **🎯 開発サーバー起動**
    ```bash
    npm run dev
    ```
 
-4. **ブラウザでアクセス**
-   ```
-   http://localhost:5173
-   ```
+5. **🌐 ブラウザでアクセス**
+   
+   [http://localhost:5173](http://localhost:5173) を開く
 
-### ビルド
+---
 
-```bash
-npm run build
-```
+## 🚢 デプロイメント
 
-## 🌐 デプロイ
+### Google App Engineへの自動デプロイ
 
-### Google App Engineへのデプロイ
-
-1. **Google Cloud CLIの設定**
+1. **🔓 Google Cloud認証**
    ```bash
    gcloud auth login
-   gcloud config set project [YOUR_PROJECT_ID]
+   gcloud config set project compact-haiku-454409-j0
    ```
 
-2. **ビルド**
+2. **⚡ 必要なAPI有効化**
    ```bash
+   gcloud services enable aiplatform.googleapis.com
+   gcloud services enable cloudbuild.googleapis.com
+   ```
+
+3. **🚀 デプロイ実行**
+   ```bash
+   cd frontend
    npm run build
-   ```
-
-3. **デプロイ**
-   ```bash
    gcloud app deploy app.yaml
    ```
 
-## 📱 対応ブラウザ
+### 🔄 CI/CD Pipeline
 
-- **PC**: Chrome, Firefox, Safari, Edge
-- **スマートフォン**: iOS Safari, Android Chrome
-- **タブレット**: 各種対応
+| ステップ | 詳細 |
+|----------|------|
+| **トリガー** | GitHub main ブランチへのpush |
+| **ビルド** | Google Cloud Build |
+| **デプロイ** | App Engine Standard Environment |
+| **URL** | https://compact-haiku-454409-j0.appspot.com/ |
 
-## 🎯 使い方
+---
 
-1. **家族設定**: 家族メンバーを登録し、スキルや年齢を設定
-2. **AI分担実行**: ボタンをクリックして今日のタスクを自動生成
-3. **タスク管理**: タスクをタップして完了/未完了を切り替え
-4. **進捗確認**: 統計画面で家族の貢献度を確認
+## 🌐 対応環境
+
+### 🖥 デスクトップブラウザ
+- ✅ Chrome 90+ (推奨)
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+
+### 📱 モバイルブラウザ
+- ✅ iOS Safari 14+
+- ✅ Android Chrome 90+
+- ✅ Samsung Internet 13+
+
+---
+
+## 📖 使用方法
+
+### 🎯 初期設定
+
+<table>
+<tr>
+<td width="30%">
+
+#### 1️⃣ 家族メンバー登録
+- "家族設定"ページから追加
+- アバター、年齢、名前を設定
+
+</td>
+<td width="35%">
+
+#### 2️⃣ スキル評価
+- 各メンバーの得意分野を10段階で評価
+- 6つのカテゴリを網羅
+
+</td>
+<td width="35%">
+
+#### 3️⃣ 利用可能時間設定
+- 平日・週末の時間帯を設定
+- 4時間帯で管理（朝・昼・夕・夜）
+
+</td>
+</tr>
+</table>
+
+### 🤖 AI分担の実行
+
+1. **▶️ 分担実行**
+   - ダッシュボードの"AI分担実行"ボタンをクリック
+   - Vertex AIが自動的に今日の家事を生成・分担
+
+2. **📊 結果確認**
+   - 公平性スコア（目標：88%以上）を確認
+   - 各メンバーの作業時間とタスク数を確認
+   - AI改善提案を参考に調整
+
+### ✅ タスク管理
+
+1. **📈 進捗更新**
+   - タスクをタップして完了/未完了を切り替え
+   - リアルタイムで統計が更新
+
+2. **🎉 完了祝福**
+   - タスク完了時に祝福アニメーション表示
+   - 家族メンバーへの感謝メッセージ送信
+
+3. **📊 分析確認**
+   - "AI分担"ページで詳細分析を確認
+   - ワークロード分析と改善提案を活用
+
+---
+
+## 🧠 主要アルゴリズム
+
+### Vertex AI分担エンジン
+
+| 要素 | 重み | 説明 |
+|------|------|------|
+| **スキルマッチング** | 70% | 各家事に最適なメンバーを選択 |
+| **負荷バランス** | 30% | 全体的な作業量の均等化 |
+| **公平性スコア** | - | リアルタイム計算で88%以上を維持 |
+| **学習機能** | - | 利用履歴から分担パターンを最適化 |
+
+### 📈 分析機能詳細
+
+- **ワークロード可視化** - メンバー別作業時間・タスク数・利用率
+- **スキル分析** - 得意分野マッピングと改善提案  
+- **トレンド分析** - 時系列での効率性・満足度変化
+- **改善提案** - AIによる具体的な分担調整アドバイス
+
+---
 
 ## 🤝 コントリビューション
 
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/AmazingFeature`)
-3. 変更をコミット (`git commit -m 'Add some AmazingFeature'`)
-4. ブランチにプッシュ (`git push origin feature/AmazingFeature`)
-5. プルリクエストを作成
+### 開発参加手順
+
+1. 🍴 このリポジトリをFork
+2. 🌿 Feature Branch作成 (`git checkout -b feature/amazing-feature`)
+3. 💾 変更をCommit (`git commit -m 'Add amazing feature'`)
+4. ⬆️ BranchへPush (`git push origin feature/amazing-feature`)
+5. 📥 Pull Request作成
+
+### 🐛 バグレポート
+
+GitHub Issuesでの報告時に以下を含めてください：
+- 🔄 再現手順の詳細
+- 💻 環境情報（OS、ブラウザ、バージョン）
+- 📸 スクリーンショット（可能な場合）
+- ❌ エラーメッセージ
+
+---
 
 ## 📄 ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。
+MIT License
 
-## 👨‍💻 作者
+---
 
-- **開発者**: [tenyyprn]
-- **Email**: [tenyyprn@gmail.com]
-- **GitHub**: [@tenyyprn]
+## 👨‍💻 開発者情報
 
-## 🙏 謝辞
+<table>
+<tr>
+<td align="center">
+<img src="https://github.com/tenyyprn.png" width="100px;" alt=""/><br />
+<b>@tenyyprn</b><br />
+📧 tenyyprn@gmail.com<br />
+🌐 <a href="https://compact-haiku-454409-j0.appspot.com/">Demo Site</a>
+</td>
+</tr>
+</table>
 
-- React チーム - 素晴らしいフレームワーク
-- Tailwind CSS - 美しいデザインシステム
-- Lucide React - アイコンライブラリ
+---
+
+## 🙏 クレジット
+
+### 主要技術
+- **Google Vertex AI** - AI分析エンジン
+- **React** - UIフレームワーク  
+- **Tailwind CSS** - スタイリングシステム
+- **Lucide** - アイコンライブラリ
+
+### 参考資料
+- Material Design - デザインガイドライン
+- 家事効率化に関する学術研究
+
+---
+
+<div align="center">
+
+**🏠 SmartChoreApp - AI技術で家族の協力を次のレベルへ 🚀**
+
+[![GitHub stars](https://img.shields.io/github/stars/tenyyprn/SmartChoreApp?style=social)](https://github.com/tenyyprn/SmartChoreApp)
+
+</div>
