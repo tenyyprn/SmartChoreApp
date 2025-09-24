@@ -1,6 +1,5 @@
 # 🏠 SmartChoreApp
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://compact-haiku-454409-j0.appspot.com/)
 [![AI Platform](https://img.shields.io/badge/AI-Vertex%20AI-blue.svg)](https://cloud.google.com/vertex-ai)
 [![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://reactjs.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
